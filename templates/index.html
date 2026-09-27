@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iris AI — Flower Classification</title>
+    <meta name="description" content="Iris flower species classification using KNN and Random Forest machine learning models.">
+    <style>
+
+        /* ── Reset ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Tokens ── */
+        :root {
+            --text:     #1a1a2e;
+            --text-mid: #555;
+            --text-lt:  #888;
+            --bg:       #fafafa;
+            --white:    #fff;
+            --border:   #e8e8e8;
+            --accent:   #3b5bdb;
+            --accent-l: #edf2ff;
+            --radius:   6px;
+            --max-w:    1140px;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+
+        /* ── Nav ── */
+        .nav {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(255,255,255,.92);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-inner {
+            max-width: var(--max-w);
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            height: 48px;
+            gap: 4px;
+        }
+
+        .nav-brand {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text);
+            margin-right: auto;
+            text-decoration: none;
+        }
+
+        .nav-brand span { color: var(--accent); }
+
+        .nav-link {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-mid);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: var(--radius);
+            transition: background .15s, color .15s;
+        }
+
+        .nav-link:hover {
+            background: var(--accent-l);
+            color: var(--accent);
+        }
+
+
+        /* ── Header ── */
+        .header {
+            max-width: var(--max-w);
+            margin: 0 auto;
+            padding: 48px 24px 8px;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .header h1 span { color: var(--accent); }
+
+        .header p {
+            font-size: 15px;
+            color: var(--text-mid);
+        }
+
+
+        /* ── Layout ── */
+        .page {
+            max-width: var(--max-w);
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .section {
+            margin-top: 48px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            margin-bottom: 4px;
+        }
+
+        .section-desc {
+            font-size: 13.5px;
+            color: var(--text-mid);
+            margin-bottom: 20px;
+            max-width: 640px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 48px 0 0;
+        }
+
+
+        /* ── Panel (white card) ── */
+        .panel {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+        }
+
+
+        /* ── Two-col ── */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+
+        /* ── Prediction section ── */
+        .predict-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            align-items: start;
+        }
+
+        .field { margin-bottom: 16px; }
+
+        .field label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 5px;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 9px 12px;
+            font-size: 14px;
+            font-family: inherit;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color .15s;
+        }
+
+        .field input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .field .hint {
+            font-size: 11px;
+            color: var(--text-lt);
+            margin-top: 3px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 10px 20px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: opacity .15s;
+        }
+
+        .btn:hover { opacity: .88; }
+
+
+        /* ── Result area ── */
+        .result-area {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            min-height: 240px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .result-idle {
+            text-align: center;
+            color: var(--text-lt);
+            font-size: 14px;
+        }
+
+        .result-idle .idle-icon {
+            font-size: 28px;
+            display: block;
+            margin-bottom: 8px;
+            opacity: .45;
+        }
+
+        /* Model result block */
+        .model-result {
+            padding: 16px 0;
+        }
+
+        .model-result + .model-result {
+            border-top: 1px solid var(--border);
+        }
+
+        .model-name {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-lt);
+            margin-bottom: 4px;
+        }
+
+        .model-species {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            text-transform: capitalize;
+            letter-spacing: -0.01em;
+        }
+
+        .model-meta {
+            font-size: 11.5px;
+            color: var(--text-lt);
+            margin-top: 2px;
+        }
+
+        .agreement-tag {
+            display: inline-block;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: var(--radius);
+            margin-bottom: 12px;
+        }
+
+        .agreement-tag.agree {
+            background: #ebfbee;
+            color: #2b8a3e;
+        }
+
+        .agreement-tag.disagree {
+            background: #fff9db;
+            color: #e67700;
+        }
+
+        /* Confidence bars */
+        .conf-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .conf-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: var(--text-lt);
+            margin-bottom: 10px;
+        }
+
+        .conf-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .conf-row:last-child { margin-bottom: 0; }
+
+        .conf-name {
+            width: 80px;
+            font-size: 12px;
+            color: var(--text-mid);
+            text-transform: capitalize;
+            flex-shrink: 0;
+        }
+
+        .conf-track {
+            flex: 1;
+            height: 5px;
+            background: var(--border);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .conf-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 99px;
+        }
+
+        .conf-pct {
+            width: 38px;
+            text-align: right;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-mid);
+            flex-shrink: 0;
+        }
+
+        .note {
+            font-size: 12.5px;
+            color: var(--text-mid);
+            line-height: 1.55;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+
+        /* ── Stats row ── */
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            flex: 1;
+            min-width: 100px;
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text);
+            display: block;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 11.5px;
+            color: var(--text-lt);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+
+        /* ── Graph ── */
+        .graph-frame {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .graph-frame img {
+            width: 100%;
+            max-width: 600px;
+            display: block;
+            margin: 0 auto;
+            border-radius: 4px;
+        }
+
+        .graph-caption {
+            font-size: 12px;
+            color: var(--text-lt);
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+
+        /* ── Footer ── */
+        .footer {
+            max-width: var(--max-w);
+            margin: 0 auto;
+            padding: 0 24px 40px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-lt);
+        }
+
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+            .predict-grid,
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .stats-row { flex-direction: column; }
+            .header { padding-top: 32px; }
+            .panel { padding: 20px; }
+        }
+
+    </style>
+</head>
+<body>
+
+
+<!-- Nav -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a class="nav-brand" href="#">Iris <span>AI</span></a>
+        <a class="nav-link" href="#prediction">Prediction</a>
+        <a class="nav-link" href="#analysis">Analysis</a>
+        <a class="nav-link" href="#evaluation">Evaluation</a>
+    </div>
+</nav>
+
+
+<!-- Header -->
+<div class="header">
+    <h1>Iris <span>AI</span> Classification</h1>
+    <p>Machine Learning Based Classification System</p>
+</div>
+
+
+<div class="page">
+
+
+    <!-- ─────────────────────────────────────────
+         Prediction
+    ───────────────────────────────────────── -->
+
+    <section class="section" id="prediction">
+        <h2 class="section-title">Prediction</h2>
+        <p class="section-desc">Enter four flower measurements. KNN and Random Forest will each independently predict the Iris species.</p>
+
+        <div class="predict-grid">
+
+            <!-- Left: inputs -->
+            <div class="panel">
+                <form method="POST" action="/predict" id="predict-form">
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px 16px;">
+
+                        <div class="field">
+                            <label for="sepal_length">Sepal Length (cm)</label>
+                            <input type="number" id="sepal_length" name="sepal_length" step="0.1" min="0" placeholder="5.1" required>
+                            <div class="hint">4.3 – 7.9</div>
+                        </div>
+
+                        <div class="field">
+                            <label for="sepal_width">Sepal Width (cm)</label>
+                            <input type="number" id="sepal_width" name="sepal_width" step="0.1" min="0" placeholder="3.5" required>
+                            <div class="hint">2.0 – 4.4</div>
+                        </div>
+
+                        <div class="field">
+                            <label for="petal_length">Petal Length (cm)</label>
+                            <input type="number" id="petal_length" name="petal_length" step="0.1" min="0" placeholder="1.4" required>
+                            <div class="hint">1.0 – 6.9</div>
+                        </div>
+
+                        <div class="field">
+                            <label for="petal_width">Petal Width (cm)</label>
+                            <input type="number" id="petal_width" name="petal_width" step="0.1" min="0" placeholder="0.2" required>
+                            <div class="hint">0.1 – 2.5</div>
+                        </div>
+
+                    </div>
+
+                    <button class="btn" type="submit" id="predict-submit-btn">Predict</button>
+
+                </form>
+            </div>
+
+            <!-- Right: results -->
+            <div class="result-area" id="result-panel">
+
+                {% if knn_prediction and rf_prediction %}
+
+                    {% if models_agree %}
+                    <span class="agreement-tag agree">Both models agree</span>
+                    {% else %}
+                    <span class="agreement-tag disagree">Models differ</span>
+                    {% endif %}
+
+                    <div class="model-result">
+                        <div class="model-name">KNN &middot; k = 5</div>
+                        <div class="model-species">{{ knn_prediction }}</div>
+                        <div class="model-meta">Test accuracy: 100%</div>
+                    </div>
+
+                    <div class="model-result">
+                        <div class="model-name">Random Forest &middot; n = 100</div>
+                        <div class="model-species">{{ rf_prediction }}</div>
+                        <div class="model-meta">Confidence: {{ rf_confidence }}%</div>
+                    </div>
+
+                    <!-- RF confidence breakdown -->
+                    <div class="conf-section">
+                        <div class="conf-label">Random Forest probability</div>
+                        {% for species, pct in rf_proba_dict.items() %}
+                        <div class="conf-row">
+                            <span class="conf-name">{{ species }}</span>
+                            <div class="conf-track"><div class="conf-fill" style="width:{{ pct }}%"></div></div>
+                            <span class="conf-pct">{{ pct }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="note">
+                        KNN and Random Forest are two different machine learning algorithms. Both models receive the same four flower measurements and independently produce a species prediction.
+                    </div>
+
+                {% else %}
+
+                    <div class="result-idle">
+                        <span class="idle-icon">&#9752;</span>
+                        Enter measurements and click <strong>Predict</strong> to see results.
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+        </div>
+    </section>
+
+
+    <hr class="divider">
+
+
+    <!-- ─────────────────────────────────────────
+         Dataset Overview
+    ───────────────────────────────────────── -->
+
+    <section class="section" id="dataset">
+        <h2 class="section-title">Dataset Overview</h2>
+        <p class="section-desc">The Iris dataset contains measurements of three flower species collected by R.A. Fisher (1936).</p>
+
+        <div class="stats-row">
+            <div class="stat"><span class="stat-value">150</span><div class="stat-label">Samples</div></div>
+            <div class="stat"><span class="stat-value">3</span><div class="stat-label">Species</div></div>
+            <div class="stat"><span class="stat-value">4</span><div class="stat-label">Features</div></div>
+            <div class="stat"><span class="stat-value">120</span><div class="stat-label">Training</div></div>
+            <div class="stat"><span class="stat-value">30</span><div class="stat-label">Testing</div></div>
+        </div>
+    </section>
+
+
+    <hr class="divider">
+
+
+    <!-- ─────────────────────────────────────────
+         EDA
+    ───────────────────────────────────────── -->
+
+    <section class="section" id="analysis">
+        <h2 class="section-title">Exploratory Data Analysis</h2>
+        <p class="section-desc">Visual exploration of the Iris dataset features and species distribution.</p>
+
+        <div class="grid-2">
+
+            <div class="graph-frame">
+                <img src="{{ url_for('static', filename='species_distribution.png') }}" alt="Species Distribution" loading="lazy">
+                <p class="graph-caption">Fig 1. The dataset is balanced with 50 samples per species.</p>
+            </div>
+
+            <div class="graph-frame">
+                <img src="{{ url_for('static', filename='petal_scatter.png') }}" alt="Petal Length vs Petal Width" loading="lazy">
+                <p class="graph-caption">Fig 2. Petal length and petal width show clear separation among species, with some overlap between Versicolor and Virginica.</p>
+            </div>
+
+        </div>
+    </section>
+
+
+    <hr class="divider">
+
+
+    <!-- ─────────────────────────────────────────
+         Model Analysis
+    ───────────────────────────────────────── -->
+
+    <section class="section">
+        <h2 class="section-title">Model Analysis</h2>
+        <p class="section-desc">Performance comparison and feature importance of the two classifiers.</p>
+
+        <div class="grid-2">
+
+            <div class="graph-frame">
+                <img src="{{ url_for('static', filename='accuracy_comparison.png') }}" alt="KNN vs Random Forest Accuracy" loading="lazy">
+                <p class="graph-caption">Fig 3. KNN achieved 100% and Random Forest achieved 90% accuracy on the 30-sample test set.</p>
+            </div>
+
+            <div class="graph-frame">
+                <img src="{{ url_for('static', filename='feature_importance.png') }}" alt="Random Forest Feature Importance" loading="lazy">
+                <p class="graph-caption">Fig 4. Petal width (43.7%) and petal length (43.1%) are the most important features for classification.</p>
+            </div>
+
+        </div>
+    </section>
+
+
+    <hr class="divider">
+
+
+    <!-- ─────────────────────────────────────────
+         Confusion Matrix
+    ───────────────────────────────────────── -->
+
+    <section class="section" id="evaluation">
+        <h2 class="section-title">Random Forest Evaluation</h2>
+        <p class="section-desc">Confusion matrix for the Random Forest classifier on the test set.</p>
+
+        <div style="max-width: 560px;">
+            <div class="graph-frame">
+                <img src="{{ url_for('static', filename='confusion_matrix.png') }}" alt="Confusion Matrix" loading="lazy">
+                <p class="graph-caption">Fig 5. Setosa was classified correctly in the current test split, while most errors occurred between Versicolor and Virginica.</p>
+            </div>
+        </div>
+    </section>
+
+
+</div>
+
+
+<!-- Footer -->
+<div class="footer">
+    Iris AI &middot; AI Lab Project &middot; Built with Python, scikit-learn, Flask
+</div>
+
+
+</body>
+</html>
